@@ -1,20 +1,13 @@
-TEMPLATE = ./template.tmp
-CSS = writ.min.css
 
-# Rule for converting github flavored markdown to html5
-MARKDOWN := pandoc --template $(TEMPLATE) -c $(CSS) --from markdown_github+pandoc_title_block --to html5 --standalone 
+# converting github flavored markdown to html5
+MARKDOWN := pandoc --from markdown_github+pandoc_title_block --to html5 --standalone 
 
-DEPLOY = deploy
-# Deploy directory.
-# Excluded from source search. Prepended to all output files
+DEPLOY = build
 DEPLOY_DIRECTORY = ./$(DEPLOY)/
 
-# Source control directory, also excluded from source search
-SRC_CTL = ./.git%
+find_all = $(shell find ./source -type f -name $(1))
 
-find_all = $(shell find . -type f -name $(1))
-
-# All markdown files. Recursive search with `find`
+# find all markdown files
 ALL_MD = $(call find_all,'*.md')
 
 # For all known markdown files: change md extension to html and prepend the
@@ -31,13 +24,12 @@ PROCESS_TYPES = %.md
 CONTROL_TYPES = %.tmp
 
 ### Identity Files
-# All files that should be deployed as-is
-# Start assuming all files
+
 ALL = $(call find_all,'*.*')
 # Non-identity types are types we want to process
 # anything in the deploy directory
 # and files we want to ignore:
-EXCLUDE_TYPES = $(PROCESS_TYPES) $(CONTROL_TYPES) $(DEPLOY_DIRECTORY)% $(SRC_CTL) ./%.DS_Store
+EXCLUDE_TYPES = $(PROCESS_TYPES) $(CONTROL_TYPES) $(DEPLOY_DIRECTORY)% ./%.DS_Store
 
 # filter out excluded types; everything else gets transfered as-is... "identity"
 ALL_IDENTITY := $(call map,filter-out,$(EXCLUDE_TYPES),$(ALL))
@@ -56,20 +48,9 @@ clean:
 
 # Recipe for html files in the deploy directory for a corresponding markdown
 # file
-$(addprefix $(DEPLOY_DIRECTORY),%.html): %.md template.tmp writ.min.css
-	@echo Converting: $<
+$(addprefix $(DEPLOY_DIRECTORY),%.html): %.md 
 	@mkdir -p $(dir $@)
 	@$(MARKDOWN) $< --output $@
-
-$(addprefix $(DEPLOY_DIRECTORY),%.html): %.html
-	@echo Moving $< to $@
-	@mkdir -p $(dir $@)
-	@cp $< $@
-
-$(addprefix $(DEPLOY_DIRECTORY),%.css): %.css
-	@echo Moving $< to $@
-	@mkdir -p $(dir $@)
-	@cp $< $@
 
 REMOTE = github
 BRANCH = gh-pages
